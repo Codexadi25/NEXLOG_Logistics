@@ -1,0 +1,35 @@
+{
+  "name": "LogisticsTracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.73.0",
+
+    "@react-navigation/native": "^6.1.9",
+    "@react-navigation/stack": "^6.3.20",
+    "react-native-screens": "^3.29.0",
+    "react-native-safe-area-context": "^4.8.2",
+    "@react-native-async-storage/async-storage": "^1.21.0",
+
+    "react-native-maps": "1.10.0",
+
+    "react-native-background-geolocation": "^4.17.0",
+    "react-native-background-fetch": "^4.2.1",
+
+    "socket.io-client": "^4.7.4"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "@babel/runtime": "^7.23.0",
+    "@react-native/babel-preset": "0.73.0",
+    "@react-native/metro-config": "0.73.0",
+    "metro-react-native-babel-preset": "^0.77.0"
+  }
+}

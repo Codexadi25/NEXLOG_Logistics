@@ -1,0 +1,77 @@
+<!-- android/app/src/main/AndroidManifest.xml -->
+<!--
+  REQUIRED PERMISSIONS for always-on background location tracking.
+  Even when GPS is OFF, these fallbacks allow network-based location.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!-- Core location permissions -->
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+  <!-- Background location (required for tracking when app is killed) -->
+  <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+  <!-- Network state (for connectivity-change detection) -->
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+  <!-- Wake lock: keeps CPU alive during background tracking -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+  <!-- Foreground service: shows persistent notification while tracking -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+  <!-- Boot receiver: restart tracking after device reboot -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+  <!-- Battery optimization: request exemption for uninterrupted tracking -->
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+  <application
+    android:name=".MainApplication"
+    android:label="@string/app_name"
+    android:icon="@mipmap/ic_launcher"
+    android:roundIcon="@mipmap/ic_launcher_round"
+    android:allowBackup="false"
+    android:theme="@style/AppTheme">
+
+    <activity
+      android:name=".MainActivity"
+      android:exported="true"
+      android:launchMode="singleTask"
+      android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+
+    <!--
+      react-native-background-geolocation requires these services.
+      HeadlessTask fires when app is KILLED (Android headless mode).
+    -->
+    <service
+      android:name="com.transistorsoft.locationmanager.service.TrackingService"
+      android:foregroundServiceType="location" />
+
+    <service
+      android:name="com.transistorsoft.locationmanager.service.LocationRequestService"
+      android:foregroundServiceType="location" />
+
+    <receiver
+      android:name="com.transistorsoft.locationmanager.adapter.BackgroundGeolocationHeadlessTask"
+      android:exported="false" />
+
+    <!-- Boot receiver for startOnBoot -->
+    <receiver
+      android:name="com.transistorsoft.locationmanager.adapter.BootReceiver"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+      </intent-filter>
+    </receiver>
+
+  </application>
+</manifest>
