@@ -29,7 +29,7 @@ const shipmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['scheduled', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned'],
+    enum: ['scheduled', 'accepted', 'picked_up', 'in_transit', 'reached_drop', 'out_for_delivery', 'delivered', 'failed', 'returned'],
     default: 'scheduled',
   },
   origin: {

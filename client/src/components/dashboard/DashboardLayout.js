@@ -5,11 +5,13 @@ import DashboardHome from './DashboardHome';
 import OrdersPage from '../orders/OrdersPage';
 import ShipmentsPage from '../shipments/ShipmentsPage';
 import TrackingPage from '../tracking/TrackingPage';
+import DispatchPage from './DispatchPage';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
   { id: 'orders', label: 'Orders', icon: '◈' },
   { id: 'shipments', label: 'Shipments', icon: '◎' },
+  { id: 'dispatch', label: 'Dispatch & Fleet', icon: '⛟', role: ['admin', 'manager'] },
   { id: 'tracking', label: 'Live Tracking', icon: '◉' },
 ];
 
@@ -24,6 +26,7 @@ export default function DashboardLayout() {
       case 'dashboard': return <DashboardHome />;
       case 'orders': return <OrdersPage />;
       case 'shipments': return <ShipmentsPage />;
+      case 'dispatch': return <DispatchPage />;
       case 'tracking': return <TrackingPage />;
       default: return <DashboardHome />;
     }
@@ -49,7 +52,7 @@ export default function DashboardLayout() {
 
         {/* Nav */}
         <nav style={styles.nav}>
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.filter(item => !item.role || item.role.includes(user?.role)).map((item) => (
             <button
               key={item.id}
               style={{ ...styles.navItem, ...(page === item.id ? styles.navItemActive : {}) }}

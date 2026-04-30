@@ -11,6 +11,11 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String },
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date },
+  // Driver specific fields
+  assignedArea: { type: String, trim: true },
+  vehicleType: { type: String, trim: true },
+  vehicleCapacity: { type: Number, default: 0 }, // max weight in kg
+  vehicleLicensePlate: { type: String, trim: true },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

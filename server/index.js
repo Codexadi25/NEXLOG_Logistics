@@ -9,8 +9,9 @@ const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
 const shipmentRoutes = require('./routes/shipments');
 const trackingRoutes = require('./routes/tracking');
-const dashboardRoutes = require('./routes/dashboard');
 const imageRoutes = require('./routes/images');
+const dispatchRoutes = require('./routes/dispatch');
+const dashboardRoutes = require('./routes/dashboard');
 const { initWebSocket } = require('./websocket/wsServer');
 
 const app = express();
@@ -33,10 +34,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/shipments', shipmentRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api/dispatch', dispatchRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

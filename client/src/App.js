@@ -4,6 +4,7 @@ import { WebSocketProvider } from './hooks/useWebSocket';
 import LoginPage from './pages/LoginPage';
 import TrackingPage from './pages/TrackingPage';
 import DashboardLayout from './components/dashboard/DashboardLayout';
+import DriverLayout from './components/dashboard/DriverLayout';
 import './App.css';
 
 function AppContent() {
@@ -34,7 +35,7 @@ function AppContent() {
 
   return (
     <WebSocketProvider token={token}>
-      <DashboardLayout />
+      {user.role === 'driver' ? <DriverLayout /> : <DashboardLayout />}
     </WebSocketProvider>
   );
 }

@@ -84,6 +84,7 @@ router.post('/', auth, async (req, res) => {
     const orderData = {
       ...req.body,
       client: req.user.role === 'client' ? req.user._id : req.body.client || req.user._id,
+      totalWeight: items.reduce((sum, item) => sum + (Number(item.weight) || 0) * (Number(item.quantity) || 1), 0),
     };
     const order = await Order.create(orderData);
     await order.populate('client', 'name email company');
@@ -132,6 +133,9 @@ router.patch('/:id', auth, async (req, res) => {
       if (status === 'in_transit') order.actualPickup = order.actualPickup || new Date();
     }
 
+    if (updates.items) {
+      updates.totalWeight = updates.items.reduce((sum, item) => sum + (Number(item.weight) || 0) * (Number(item.quantity) || 1), 0);
+    }
     Object.assign(order, updates);
     await order.save();
     await order.populate('client', 'name email company');

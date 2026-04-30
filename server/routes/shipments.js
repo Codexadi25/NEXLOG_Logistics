@@ -80,6 +80,8 @@ router.patch('/:id', auth, async (req, res) => {
         shipment.actualDelivery = new Date();
         // Update associated orders
         await Order.updateMany({ shipment: shipment._id }, { status: 'delivered', actualDelivery: new Date() });
+      } else if (status === 'failed') {
+        await Order.updateMany({ shipment: shipment._id }, { status: 'cancelled' }); // Or 'failed' if added to schema
       }
     }
 
