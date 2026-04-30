@@ -49,12 +49,10 @@ router.get('/me', auth, async (req, res) => {
 // Update profile
 router.patch('/me', auth, async (req, res) => {
   try {
-    const { name, phone, company } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, phone, company },
-      { new: true, runValidators: true }
-    );
+    const allowedFields = ['name', 'phone', 'company', 'avatar'];
+    const updates = {};
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
     res.json({ user });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -12,6 +12,8 @@ const trackingRoutes = require('./routes/tracking');
 const imageRoutes = require('./routes/images');
 const dispatchRoutes = require('./routes/dispatch');
 const dashboardRoutes = require('./routes/dashboard');
+const usersRoutes = require('./routes/users');
+const lifelineRoutes = require('./routes/lifeline');
 const { initWebSocket } = require('./websocket/wsServer');
 
 const app = express();
@@ -34,10 +36,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/shipments', shipmentRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/dispatch', dispatchRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/lifeline', lifelineRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

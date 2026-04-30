@@ -7,7 +7,7 @@ const Shipment = require('../models/Shipment');
 const router = express.Router();
 
 // Get all drivers
-router.get('/drivers', auth, requireRole('admin', 'manager'), async (req, res) => {
+router.get('/drivers', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
   try {
     const drivers = await User.find({ role: 'driver' }).select('-password');
     res.json({ drivers });
@@ -17,7 +17,7 @@ router.get('/drivers', auth, requireRole('admin', 'manager'), async (req, res) =
 });
 
 // Onboard a new driver
-router.post('/drivers', auth, requireRole('admin', 'manager'), async (req, res) => {
+router.post('/drivers', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
   try {
     const { name, email, password, assignedArea, vehicleType, vehicleCapacity, vehicleLicensePlate } = req.body;
     
@@ -38,7 +38,7 @@ router.post('/drivers', auth, requireRole('admin', 'manager'), async (req, res) 
 });
 
 // Auto-assign orders to drivers
-router.post('/auto-assign', auth, requireRole('admin', 'manager'), async (req, res) => {
+router.post('/auto-assign', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
   try {
     // Find all pending, unassigned orders
     const orders = await Order.find({ status: 'pending', shipment: { $exists: false } }).populate('pickupAddress');
@@ -120,15 +120,44 @@ router.post('/auto-assign', auth, requireRole('admin', 'manager'), async (req, r
   }
 });
 
-// Manual assign
-router.post('/manual-assign', auth, requireRole('admin', 'manager'), async (req, res) => {
+// Manual assign - supports adding to existing shipment OR creating a new one
+router.post('/manual-assign', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
   try {
-    const { orderId, driverId } = req.body;
+    const { orderId, driverId, shipmentId, newShipmentData } = req.body;
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    
+
+    // ---- Case 1: Add to an existing shipment ----
+    if (shipmentId) {
+      const shipment = await Shipment.findById(shipmentId);
+      if (!shipment) return res.status(404).json({ message: 'Shipment not found' });
+
+      if (!shipment.orders.includes(order._id)) {
+        shipment.orders.push(order._id);
+        await shipment.save();
+      }
+
+      order.shipment = shipment._id;
+      order.status = 'processing';
+      if (shipment.driver) order.assignedTo = shipment.driver;
+      order.statusHistory.push({
+        status: 'processing',
+        note: `Added to existing shipment ${shipment.trackingNumber}`,
+        updatedBy: req.user._id
+      });
+      await order.save();
+      return res.json({ message: 'Order added to shipment', shipment });
+    }
+
+    // ---- Case 2: Create a new shipment ----
     const driver = await User.findById(driverId);
     if (!driver || driver.role !== 'driver') return res.status(400).json({ message: 'Invalid driver' });
+
+    // Use provided origin/destination, fall back to order addresses
+    const origin = newShipmentData?.origin || order.pickupAddress;
+    const destination = newShipmentData?.destination || order.deliveryAddress;
+    const priority = newShipmentData?.priority || order.priority;
+    const estimatedDelivery = newShipmentData?.estimatedDelivery || null;
 
     const shipment = new Shipment({
       orders: [order._id],
@@ -138,9 +167,11 @@ router.post('/manual-assign', auth, requireRole('admin', 'manager'), async (req,
         licensePlate: driver.vehicleLicensePlate
       },
       status: 'scheduled',
-      origin: order.pickupAddress,
-      destination: order.deliveryAddress,
-      priority: order.priority
+      origin,
+      destination,
+      priority,
+      ...(estimatedDelivery ? { estimatedDelivery: new Date(estimatedDelivery) } : {}),
+      notes: newShipmentData?.notes || '',
     });
     await shipment.save();
 
@@ -149,7 +180,7 @@ router.post('/manual-assign', auth, requireRole('admin', 'manager'), async (req,
     order.assignedTo = driver._id;
     order.statusHistory.push({
       status: 'processing',
-      note: `Manually assigned to driver ${driver.name}`,
+      note: `Manually assigned to driver ${driver.name} — new shipment ${shipment.trackingNumber}`,
       updatedBy: req.user._id
     });
     await order.save();

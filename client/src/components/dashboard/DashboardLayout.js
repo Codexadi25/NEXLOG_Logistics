@@ -6,6 +6,9 @@ import OrdersPage from '../orders/OrdersPage';
 import ShipmentsPage from '../shipments/ShipmentsPage';
 import TrackingPage from '../tracking/TrackingPage';
 import DispatchPage from './DispatchPage';
+import AccountsPage from './AccountsPage';
+import ProfileModal from '../common/ProfileModal';
+import LifelinePage from '../../pages/LifelinePage';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
@@ -13,12 +16,15 @@ const NAV_ITEMS = [
   { id: 'shipments', label: 'Shipments', icon: '◎' },
   { id: 'dispatch', label: 'Dispatch & Fleet', icon: '⛟', role: ['admin', 'manager'] },
   { id: 'tracking', label: 'Live Tracking', icon: '◉' },
+  { id: 'lifeline', label: 'Support Lifeline', icon: '⊕', role: ['admin', 'manager', 'agent'] },
+  { id: 'accounts', label: 'Team & Accounts', icon: '⊞', role: ['admin', 'manager'] },
 ];
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const [page, setPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
   const { connected } = useWebSocket();
 
   const renderPage = () => {
@@ -28,6 +34,8 @@ export default function DashboardLayout() {
       case 'shipments': return <ShipmentsPage />;
       case 'dispatch': return <DispatchPage />;
       case 'tracking': return <TrackingPage />;
+      case 'lifeline': return <LifelinePage />;
+      case 'accounts': return <AccountsPage />;
       default: return <DashboardHome />;
     }
   };
@@ -104,15 +112,27 @@ export default function DashboardLayout() {
           </div>
           <div style={styles.headerRight}>
             <div style={styles.headerTime}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-            <div style={styles.headerRole}>
-              <div style={styles.headerAvatar}>{user?.name?.[0]?.toUpperCase()}</div>
+            <button
+              onClick={() => setShowProfile(true)}
+              style={{ ...styles.headerRole, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 10px', borderRadius: 10, transition: 'background 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,212,255,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              title="Edit Profile"
+            >
+              <div style={{ ...styles.headerAvatar, overflow: 'hidden' }}>
+                {user?.avatar
+                  ? <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                  : user?.name?.[0]?.toUpperCase()
+                }
+              </div>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 500 }}>{user?.name}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.company || user?.role}</div>
               </div>
-            </div>
+            </button>
           </div>
         </header>
+        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
         {/* Content */}
         <main style={styles.content}>{renderPage()}</main>

@@ -63,6 +63,12 @@ const orderSchema = new mongoose.Schema({
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     note: String,
   }],
+  internalLogs: [{
+    note: String,
+    type: { type: String, enum: ['note', 'call', 'message'], default: 'note' },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 // Auto-generate order number

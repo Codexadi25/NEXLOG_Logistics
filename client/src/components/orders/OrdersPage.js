@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../context/AuthContext';
 import { useAuth } from '../../context/AuthContext';
 import OrderModal from './OrderModal';
+import { CountrySelect, StateSelect, CityInput } from '../common/LocationInput';
 
 export default function OrdersPage() {
   const { user } = useAuth();
@@ -303,7 +304,15 @@ function OrderDetailModal({ order, onClose, onRefresh }) {
             </>
           )}
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+          {!current.shipment && (
+            <AssignShipmentButton order={current} onRefresh={() => { api.get(`/orders/${order._id}`).then(r => setCurrent(r.data.order)); onRefresh(); }} />
+          )}
+          {current.shipment && (
+            <div style={{ fontSize: 12, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ✓ Assigned to shipment
+            </div>
+          )}
           <button className="btn btn-secondary" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -329,3 +338,209 @@ const styles = {
   timelineItem: { display: 'flex', gap: '10px', alignItems: 'flex-start', position: 'relative', marginLeft: '-9px' },
   timelineDot: { width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg-card)', flexShrink: 0, marginTop: '4px' },
 };
+
+function AssignShipmentButton({ order, onRefresh }) {
+  const [showModal, setShowModal] = useState(false);
+  return (
+    <>
+      <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+        🚚 Assign to Shipment
+      </button>
+      {showModal && (
+        <AssignShipmentModal
+          order={order}
+          onClose={() => setShowModal(false)}
+          onSave={() => { setShowModal(false); onRefresh(); }}
+        />
+      )}
+    </>
+  );
+}
+
+function AssignShipmentModal({ order, onClose, onSave }) {
+  const [existingShipments, setExistingShipments] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [mode, setMode] = useState('existing'); // 'existing' | 'new'
+  const [selectedShipmentId, setSelectedShipmentId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [newForm, setNewForm] = useState({
+    driverId: '',
+    priority: order.priority || 'normal',
+    estimatedDelivery: '',
+    notes: '',
+    origin: {
+      address: order.pickupAddress?.street || '',
+      city: order.pickupAddress?.city || '',
+      state: order.pickupAddress?.state || '',
+      country: order.pickupAddress?.country || '',
+    },
+    destination: {
+      address: order.deliveryAddress?.street || '',
+      city: order.deliveryAddress?.city || '',
+      state: order.deliveryAddress?.state || '',
+      country: order.deliveryAddress?.country || '',
+    },
+  });
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/shipments', { params: { status: 'scheduled', limit: 50 } }),
+      api.get('/dispatch/drivers'),
+    ]).then(([sRes, dRes]) => {
+      setExistingShipments(sRes.data.shipments || []);
+      setDrivers(dRes.data.drivers || []);
+    }).catch(console.error);
+  }, []);
+
+  const selectedDriver = drivers.find(d => d._id === newForm.driverId);
+
+  const handleAssignExisting = async () => {
+    if (!selectedShipmentId) return alert('Please select a shipment');
+    setLoading(true);
+    try {
+      // Add order to the existing shipment
+      await api.post('/dispatch/manual-assign', { orderId: order._id, shipmentId: selectedShipmentId });
+      onSave();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign');
+    } finally { setLoading(false); }
+  };
+
+  const handleCreateNew = async () => {
+    if (!newForm.driverId) return alert('Please select a driver');
+    setLoading(true);
+    try {
+      await api.post('/dispatch/manual-assign', { orderId: order._id, driverId: newForm.driverId, newShipmentData: newForm });
+      onSave();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create shipment');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Assign {order.orderNumber} to Shipment</span>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => setMode('existing')}
+              style={{ flex: 1, padding: '10px 16px', background: mode === 'existing' ? 'var(--accent)' : 'transparent', color: mode === 'existing' ? 'var(--bg-primary)' : 'var(--text-muted)', border: 'none', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              Add to Existing Shipment
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('new')}
+              style={{ flex: 1, padding: '10px 16px', background: mode === 'new' ? 'var(--accent)' : 'transparent', color: mode === 'new' ? 'var(--bg-primary)' : 'var(--text-muted)', border: 'none', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              Create New Shipment
+            </button>
+          </div>
+
+          {mode === 'existing' ? (
+            <div>
+              {existingShipments.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
+                  No scheduled shipments available.<br />
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => setMode('new')}>Create a new one</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+                  {existingShipments.map(s => (
+                    <label
+                      key={s._id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: 14,
+                        background: selectedShipmentId === s._id ? 'rgba(0,212,255,0.08)' : 'var(--bg-secondary)',
+                        border: `1px solid ${selectedShipmentId === s._id ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s',
+                      }}
+                    >
+                      <input type="radio" name="shipment" value={s._id} checked={selectedShipmentId === s._id} onChange={() => setSelectedShipmentId(s._id)} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 700 }}>{s.trackingNumber}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                          {s.origin?.city} → {s.destination?.city} · Driver: {s.driver?.name || 'Unassigned'} · {s.orders?.length || 0} orders
+                        </div>
+                      </div>
+                      <span className={`badge badge-${s.status}`}>{s.status}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label">Delivery Partner (License Plate) *</label>
+                <select className="form-select" value={newForm.driverId} onChange={e => setNewForm(f => ({ ...f, driverId: e.target.value }))}>
+                  <option value="">Select Driver...</option>
+                  {drivers.map(d => (
+                    <option key={d._id} value={d._id}>
+                      {d.vehicleLicensePlate ? `${d.vehicleLicensePlate} — ` : ''}{d.name} ({d.assignedArea || 'All Areas'})
+                    </option>
+                  ))}
+                </select>
+                {selectedDriver && (
+                  <div style={{ marginTop: 8, padding: 10, background: 'var(--bg-secondary)', borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    🚗 {selectedDriver.vehicleType} · Capacity: {selectedDriver.vehicleCapacity}kg · Plate: {selectedDriver.vehicleLicensePlate || '—'}
+                  </div>
+                )}
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Priority</label>
+                  <select className="form-select" value={newForm.priority} onChange={e => setNewForm(f => ({ ...f, priority: e.target.value }))}>
+                    {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Estimated Delivery</label>
+                  <input className="form-input" type="datetime-local" value={newForm.estimatedDelivery} onChange={e => setNewForm(f => ({ ...f, estimatedDelivery: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 8 }}>ORIGIN (Pickup)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input className="form-input" placeholder="Street address" value={newForm.origin.address} onChange={e => setNewForm(f => ({ ...f, origin: { ...f.origin, address: e.target.value } }))} />
+                    <CountrySelect value={newForm.origin.country} onChange={v => setNewForm(f => ({ ...f, origin: { ...f.origin, country: v, state: '', city: '' } }))} />
+                    <StateSelect country={newForm.origin.country} value={newForm.origin.state} onChange={v => setNewForm(f => ({ ...f, origin: { ...f.origin, state: v, city: '' } }))} />
+                    <CityInput country={newForm.origin.country} state={newForm.origin.state} value={newForm.origin.city} onChange={v => setNewForm(f => ({ ...f, origin: { ...f.origin, city: v } }))} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 8 }}>DESTINATION (Delivery)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input className="form-input" placeholder="Street address" value={newForm.destination.address} onChange={e => setNewForm(f => ({ ...f, destination: { ...f.destination, address: e.target.value } }))} />
+                    <CountrySelect value={newForm.destination.country} onChange={v => setNewForm(f => ({ ...f, destination: { ...f.destination, country: v, state: '', city: '' } }))} />
+                    <StateSelect country={newForm.destination.country} value={newForm.destination.state} onChange={v => setNewForm(f => ({ ...f, destination: { ...f.destination, state: v, city: '' } }))} />
+                    <CityInput country={newForm.destination.country} state={newForm.destination.state} value={newForm.destination.city} onChange={v => setNewForm(f => ({ ...f, destination: { ...f.destination, city: v } }))} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={loading || (mode === 'existing' && !selectedShipmentId) || (mode === 'new' && !newForm.driverId)}
+            onClick={mode === 'existing' ? handleAssignExisting : handleCreateNew}
+          >
+            {loading ? 'Assigning...' : (mode === 'existing' ? 'Add to Shipment' : 'Create & Assign Shipment')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

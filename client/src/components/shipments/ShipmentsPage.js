@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../context/AuthContext';
 import { useAuth } from '../../context/AuthContext';
+import { CountrySelect, StateSelect, CityInput } from '../common/LocationInput';
 
 export default function ShipmentsPage() {
   const { user } = useAuth();
@@ -17,8 +18,8 @@ export default function ShipmentsPage() {
     setLoading(true);
     try {
       const { data } = await api.get('/shipments', { params: { page, limit: 15, search, status: statusFilter } });
-      setShipments(data.shipments);
-      setTotal(data.total);
+      setShipments(data.shipments || []);
+      setTotal(data.total || 0);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, [page, search, statusFilter]);
@@ -28,9 +29,15 @@ export default function ShipmentsPage() {
   const canManage = ['admin', 'manager'].includes(user?.role);
 
   const updateStatus = async (id, status, note = '') => {
-    await api.patch(`/shipments/${id}`, { status, trackingEvent: { status, description: note } });
-    fetchShipments();
+    try {
+      await api.patch(`/shipments/${id}`, { status, trackingEvent: { status, description: note || `Status changed to ${status}` } });
+      fetchShipments();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Update failed');
+    }
   };
+
+  const STATUS_OPTIONS = ['scheduled','accepted','picked_up','in_transit','reached_drop','out_for_delivery','delivered','failed','returned'];
 
   return (
     <div>
@@ -48,9 +55,9 @@ export default function ShipmentsPage() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <input className="form-input" placeholder="Search tracking #…" style={{ maxWidth: 220 }}
           value={search} onChange={e => setSearch(e.target.value)} />
-        <select className="form-select" style={{ maxWidth: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="form-select" style={{ maxWidth: 200 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
-          {['scheduled','picked_up','in_transit','out_for_delivery','delivered','failed'].map(s => (
+          {STATUS_OPTIONS.map(s => (
             <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
           ))}
         </select>
@@ -66,7 +73,7 @@ export default function ShipmentsPage() {
                 <tr>
                   <th>Tracking #</th>
                   <th>Driver</th>
-                  <th>Orders</th>
+                  <th>Assigned Orders</th>
                   <th>Origin → Dest</th>
                   <th>Status</th>
                   <th>Priority</th>
@@ -85,11 +92,33 @@ export default function ShipmentsPage() {
                       {s.driver ? (
                         <div>
                           <div style={{ fontWeight: 500 }}>{s.driver.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.driver.phone}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.vehicle?.licensePlate || s.driver.phone}</div>
                         </div>
                       ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td>{s.orders?.length || 0} order(s)</td>
+                    <td>
+                      {s.orders?.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 200 }}>
+                          {s.orders.slice(0, 3).map((o, i) => (
+                            <div key={i} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              background: 'rgba(0,212,255,0.07)', border: '1px solid rgba(0,212,255,0.2)',
+                              borderRadius: 4, padding: '2px 6px', fontSize: 11, fontFamily: 'var(--font-mono)'
+                            }}>
+                              <span style={{ color: 'var(--accent)' }}>{typeof o === 'object' ? o.orderNumber : o?.toString?.().slice(-8)}</span>
+                              {typeof o === 'object' && o.status && (
+                                <span className={`badge badge-${o.status}`} style={{ fontSize: 9, padding: '1px 4px' }}>{o.status.replace(/_/g, ' ')}</span>
+                              )}
+                            </div>
+                          ))}
+                          {s.orders.length > 3 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>+{s.orders.length - 3} more</div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>No orders</span>
+                      )}
+                    </td>
                     <td style={{ fontSize: 12 }}>
                       {s.origin?.city && <span>{s.origin.city}</span>}
                       {s.origin?.city && s.destination?.city && <span style={{ color: 'var(--text-muted)', margin: '0 4px' }}>→</span>}
@@ -97,9 +126,9 @@ export default function ShipmentsPage() {
                     </td>
                     <td>
                       {canManage ? (
-                        <select className="form-select" style={{ padding: '4px 8px', fontSize: 12, minWidth: 140 }}
+                        <select className="form-select" style={{ padding: '4px 8px', fontSize: 12, minWidth: 155 }}
                           value={s.status} onChange={e => updateStatus(s._id, e.target.value)}>
-                          {['scheduled','picked_up','in_transit','out_for_delivery','delivered','failed','returned'].map(st => (
+                          {STATUS_OPTIONS.map(st => (
                             <option key={st} value={st}>{st.replace(/_/g, ' ')}</option>
                           ))}
                         </select>
@@ -107,7 +136,7 @@ export default function ShipmentsPage() {
                         <span className={`badge badge-${s.status}`}>{s.status?.replace(/_/g, ' ')}</span>
                       )}
                     </td>
-                    <td><span className={`badge badge-${s.priority}`}>{s.priority}</span></td>
+                    <td><span className={`badge badge-${s.priority}`}>{s.priority || 'normal'}</span></td>
                     <td style={{ fontSize: 12 }}>
                       {s.estimatedDelivery ? new Date(s.estimatedDelivery).toLocaleDateString() : '—'}
                     </td>
@@ -117,7 +146,10 @@ export default function ShipmentsPage() {
                   </tr>
                 ))}
                 {!shipments.length && (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 48 }}>No shipments yet</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 48 }}>
+                    No shipments yet
+                    {canManage && <> · <button className="btn btn-primary btn-sm" onClick={() => setCreateModal(true)}>Create one</button></>}
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -140,7 +172,6 @@ export default function ShipmentsPage() {
 function ShipmentDetailModal({ shipment, onClose, onRefresh, canManage }) {
   const [s, setS] = useState(shipment);
   const [locForm, setLocForm] = useState({ address: '', city: '', state: '', country: '' });
-  const [eventNote, setEventNote] = useState('');
 
   const refresh = async () => {
     const { data } = await api.get(`/shipments/${s._id}`);
@@ -158,7 +189,7 @@ function ShipmentDetailModal({ shipment, onClose, onRefresh, canManage }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <span className="modal-title">{s.trackingNumber}</span>
           <span className={`badge badge-${s.status}`}>{s.status?.replace(/_/g, ' ')}</span>
@@ -176,12 +207,33 @@ function ShipmentDetailModal({ shipment, onClose, onRefresh, canManage }) {
             </div>
           </div>
 
+          {/* Assigned Orders */}
+          {s.orders?.length > 0 && (
+            <div>
+              <div style={labelStyle}>ASSIGNED ORDERS ({s.orders.length})</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                {s.orders.map((o, i) => typeof o === 'object' ? (
+                  <div key={i} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 700 }}>{o.orderNumber}</span>
+                      <span className={`badge badge-${o.status}`}>{o.status?.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      Client: {o.client?.name || '—'}
+                      {o.deliveryAddress && <> · To: {o.deliveryAddress.city}, {o.deliveryAddress.state}</>}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: 12 }}>Order ID: {o}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {s.currentLocation && (
             <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
               <div style={labelStyle}>CURRENT LOCATION</div>
-              <div style={{ color: 'var(--accent)' }}>
-                {s.currentLocation.city}, {s.currentLocation.state}
-              </div>
+              <div style={{ color: 'var(--accent)' }}>{s.currentLocation.city}, {s.currentLocation.state}</div>
               {s.currentLocation.lastUpdated && (
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                   Updated: {new Date(s.currentLocation.lastUpdated).toLocaleString()}
@@ -194,10 +246,10 @@ function ShipmentDetailModal({ shipment, onClose, onRefresh, canManage }) {
             <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
               <div style={labelStyle}>UPDATE LOCATION</div>
               <div className="grid-2" style={{ marginTop: 8 }}>
-                <input className="form-input" placeholder="City" value={locForm.city} onChange={e => setLocForm(f => ({ ...f, city: e.target.value }))} />
-                <input className="form-input" placeholder="State" value={locForm.state} onChange={e => setLocForm(f => ({ ...f, state: e.target.value }))} />
+                <CityInput country={locForm.country} state={locForm.state} value={locForm.city} onChange={v => setLocForm(f => ({ ...f, city: v }))} placeholder="City" />
+                <StateSelect country={locForm.country} value={locForm.state} onChange={v => setLocForm(f => ({ ...f, state: v, city: '' }))} />
               </div>
-              <input className="form-input" placeholder="Street address (optional)" style={{ marginTop: 8 }} value={locForm.address} onChange={e => setLocForm(f => ({ ...f, address: e.target.value }))} />
+              <CountrySelect value={locForm.country} onChange={v => setLocForm(f => ({ ...f, country: v, state: '', city: '' }))} style={{ marginTop: 8 }} />
               <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={updateLocation}>Update Location</button>
             </div>
           )}
@@ -208,7 +260,7 @@ function ShipmentDetailModal({ shipment, onClose, onRefresh, canManage }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, paddingLeft: 16, borderLeft: '2px solid var(--border)' }}>
               {(s.trackingEvents || []).slice().reverse().map((ev, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, position: 'relative', marginLeft: -9 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg-card)', flexShrink: 0, marginTop: 4 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? 'var(--accent)' : 'var(--border)', border: '2px solid var(--bg-card)', flexShrink: 0, marginTop: 4 }} />
                   <div>
                     <span className={`badge badge-${ev.status}`}>{ev.status?.replace(/_/g, ' ')}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{new Date(ev.timestamp).toLocaleString()}</span>
@@ -254,28 +306,57 @@ function CreateShipmentModal({ onClose, onSave }) {
   const [form, setForm] = useState({
     status: 'scheduled',
     priority: 'normal',
-    origin: { address: '', city: '', state: '', country: 'US' },
-    destination: { address: '', city: '', state: '', country: 'US' },
-    vehicle: { type: 'truck', licensePlate: '', model: '' },
+    driverId: '',
+    origin: { address: '', city: '', state: '', country: '' },
+    destination: { address: '', city: '', state: '', country: '' },
     estimatedDelivery: '',
     notes: '',
   });
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const set = (path, field) => (e) => {
-    setForm(f => ({ ...f, [path]: { ...f[path], [field]: e.target.value } }));
-  };
+  useEffect(() => {
+    api.get('/dispatch/drivers')
+      .then(r => setDrivers(r.data.drivers || []))
+      .catch(console.error);
+  }, []);
+
+  const selectedDriver = drivers.find(d => d._id === form.driverId);
+
+
 
   const submit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (!form.origin.city) return setError('Origin city is required');
+    if (!form.destination.city) return setError('Destination city is required');
+
     setLoading(true);
     try {
-      const payload = { ...form };
-      if (!payload.estimatedDelivery) delete payload.estimatedDelivery;
+      const payload = {
+        status: form.status,
+        priority: form.priority,
+        origin: form.origin,
+        destination: form.destination,
+        notes: form.notes,
+      };
+      if (form.driverId) {
+        payload.driver = form.driverId;
+        if (selectedDriver) {
+          payload.vehicle = {
+            type: selectedDriver.vehicleType,
+            licensePlate: selectedDriver.vehicleLicensePlate,
+          };
+        }
+      }
+      if (form.estimatedDelivery) payload.estimatedDelivery = form.estimatedDelivery;
+
       await api.post('/shipments', payload);
       onSave();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create');
+      setError(err.response?.data?.message || 'Failed to create shipment');
     } finally {
       setLoading(false);
     }
@@ -283,39 +364,71 @@ function CreateShipmentModal({ onClose, onSave }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <span className="modal-title">NEW SHIPMENT</span>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={submit}>
-          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {error && <div style={{ color: 'var(--danger)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: 12 }}>{error}</div>}
+
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Priority</label>
                 <select className="form-select" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                  {['low','normal','high','urgent'].map(p => <option key={p} value={p}>{p}</option>)}
+                  {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">ETA</label>
+                <label className="form-label">Estimated Delivery</label>
                 <input className="form-input" type="datetime-local" value={form.estimatedDelivery} onChange={e => setForm(f => ({ ...f, estimatedDelivery: e.target.value }))} />
               </div>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Origin</div>
-            <div className="grid-2">
-              <input className="form-input" placeholder="City" value={form.origin.city} onChange={set('origin', 'city')} />
-              <input className="form-input" placeholder="State" value={form.origin.state} onChange={set('origin', 'state')} />
+
+            {/* Driver */}
+            <div className="form-group">
+              <label className="form-label">Delivery Partner (License Plate)</label>
+              <select className="form-select" value={form.driverId} onChange={e => setForm(f => ({ ...f, driverId: e.target.value }))}>
+                <option value="">Unassigned (assign later)</option>
+                {drivers.map(d => (
+                  <option key={d._id} value={d._id}>
+                    {d.vehicleLicensePlate ? `${d.vehicleLicensePlate} — ` : ''}{d.name} ({d.assignedArea || 'All Areas'})
+                  </option>
+                ))}
+              </select>
+              {selectedDriver && (
+                <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  🚗 {selectedDriver.vehicleType} · Capacity: {selectedDriver.vehicleCapacity}kg · Plate: {selectedDriver.vehicleLicensePlate || '—'}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Destination</div>
-            <div className="grid-2">
-              <input className="form-input" placeholder="City" value={form.destination.city} onChange={set('destination', 'city')} />
-              <input className="form-input" placeholder="State" value={form.destination.state} onChange={set('destination', 'state')} />
+
+            {/* Origin */}
+            <div>
+              <div style={labelStyle}>ORIGIN (Pickup)</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                <input className="form-input" placeholder="Street address" value={form.origin.address} onChange={e => setForm(f => ({ ...f, origin: { ...f.origin, address: e.target.value } }))} />
+                <CountrySelect value={form.origin.country} onChange={v => setForm(f => ({ ...f, origin: { ...f.origin, country: v, state: '', city: '' } }))} />
+                <StateSelect country={form.origin.country} value={form.origin.state} onChange={v => setForm(f => ({ ...f, origin: { ...f.origin, state: v, city: '' } }))} />
+                <CityInput country={form.origin.country} state={form.origin.state} value={form.origin.city} onChange={v => setForm(f => ({ ...f, origin: { ...f.origin, city: v } }))} placeholder="City *" />
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Vehicle</div>
-            <div className="grid-2">
-              <input className="form-input" placeholder="Type (truck, van…)" value={form.vehicle.type} onChange={set('vehicle', 'type')} />
-              <input className="form-input" placeholder="License plate" value={form.vehicle.licensePlate} onChange={set('vehicle', 'licensePlate')} />
+
+            {/* Destination */}
+            <div>
+              <div style={labelStyle}>DESTINATION (Delivery)</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                <input className="form-input" placeholder="Street address" value={form.destination.address} onChange={e => setForm(f => ({ ...f, destination: { ...f.destination, address: e.target.value } }))} />
+                <CountrySelect value={form.destination.country} onChange={v => setForm(f => ({ ...f, destination: { ...f.destination, country: v, state: '', city: '' } }))} />
+                <StateSelect country={form.destination.country} value={form.destination.state} onChange={v => setForm(f => ({ ...f, destination: { ...f.destination, state: v, city: '' } }))} />
+                <CityInput country={form.destination.country} state={form.destination.state} value={form.destination.city} onChange={v => setForm(f => ({ ...f, destination: { ...f.destination, city: v } }))} placeholder="City *" />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <input className="form-input" placeholder="Internal notes…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
           </div>
           <div className="modal-footer">

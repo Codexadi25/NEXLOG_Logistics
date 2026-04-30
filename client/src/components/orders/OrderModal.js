@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { api } from '../../context/AuthContext';
+import { CountrySelect, StateSelect, CityInput } from '../common/LocationInput';
 
 const emptyItem = () => ({ name: '', sku: '', quantity: 1, weight: '', description: '', svgImage: '' });
 const emptyAddress = () => ({ company: '', contactName: '', street: '', city: '', state: '', postalCode: '', country: 'US', phone: '', googleMapLocation: '' });
@@ -382,14 +383,14 @@ function AddressForm({ label, address, setField }) {
           <label className="form-label">Street Address *</label>
           <input className="form-input" value={safeAddress.street || ''} onChange={setField('street')} placeholder="123 Main St" />
         </div>
-        <div className="grid-3">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <div className="form-group">
-            <label className="form-label">City *</label>
-            <input className="form-input" value={safeAddress.city || ''} onChange={setField('city')} placeholder="New York" />
+            <label className="form-label">State/Province *</label>
+            <StateSelect country={safeAddress.country} value={safeAddress.state || ''} onChange={v => setField('state')({ target: { value: v } })} />
           </div>
           <div className="form-group">
-            <label className="form-label">State *</label>
-            <input className="form-input" value={safeAddress.state || ''} onChange={setField('state')} placeholder="NY" />
+            <label className="form-label">City *</label>
+            <CityInput country={safeAddress.country} state={safeAddress.state} value={safeAddress.city || ''} onChange={v => setField('city')({ target: { value: v } })} placeholder="City" />
           </div>
           <div className="form-group">
             <label className="form-label">Postal Code *</label>
@@ -399,7 +400,7 @@ function AddressForm({ label, address, setField }) {
         <div className="grid-2">
           <div className="form-group">
             <label className="form-label">Country</label>
-            <input className="form-input" value={safeAddress.country || 'US'} onChange={setField('country')} />
+            <CountrySelect value={safeAddress.country || ''} onChange={v => setField('country')({ target: { value: v } })} />
           </div>
           <div className="form-group">
             <label className="form-label">Phone</label>

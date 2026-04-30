@@ -49,7 +49,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create shipment
-router.post('/', auth, requireRole('admin', 'manager'), async (req, res) => {
+router.post('/', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
   try {
     const shipment = await Shipment.create(req.body);
 

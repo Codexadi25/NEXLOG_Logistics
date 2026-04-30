@@ -130,18 +130,33 @@ export default function DispatchPage() {
           ))}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
           {drivers.map(d => (
-            <div key={d._id} className="card">
-              <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-primary)' }}>{d.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.email}</div>
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {d.assignedArea || 'Unassigned (All)'}</div>
-                <div><span style={{ color: 'var(--text-muted)' }}>Vehicle:</span> {d.vehicleType} ({d.vehicleCapacity}kg)</div>
-                <div><span style={{ color: 'var(--text-muted)' }}>Plate:</span> {d.vehicleLicensePlate}</div>
+            <div key={d._id} className="card" style={{ position: 'relative', borderColor: d.isOnboarded ? 'rgba(0,212,255,0.2)' : 'rgba(239,68,68,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{d.name}</div>
+                {d.isOnboarded
+                  ? <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: 'rgba(0,212,255,0.1)', color: 'var(--accent)' }}>✓ Onboarded</span>
+                  : <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: 'rgba(239,68,68,0.1)', color: 'var(--danger)' }}>Pending KYC</span>
+                }
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>{d.email}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {d.assignedArea || 'All'}</div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Vehicle:</span> {d.vehicleType || '—'} · {d.vehicleCapacity}kg</div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Plate:</span> <strong style={{ color: 'var(--accent)' }}>{d.vehicleLicensePlate || '—'}</strong></div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: d.kyc?.aadhaarVerified ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: d.kyc?.aadhaarVerified ? 'var(--success)' : 'var(--danger)' }}>
+                  {d.kyc?.aadhaarVerified ? '✓' : '✗'} Aadhaar
+                </span>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: d.kyc?.vehicleVerified ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: d.kyc?.vehicleVerified ? 'var(--success)' : 'var(--danger)' }}>
+                  {d.kyc?.vehicleVerified ? '✓' : '✗'} Vehicle
+                </span>
               </div>
             </div>
           ))}
+          {!drivers.length && <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>No drivers registered yet.</div>}
         </div>
       )}
 
