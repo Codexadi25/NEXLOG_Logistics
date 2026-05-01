@@ -8,7 +8,7 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 240000; // 4 minutes (240,000 ms)
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.REACT_APP_API_URL || '/api',
   timeout: API_TIMEOUT,
 });
 

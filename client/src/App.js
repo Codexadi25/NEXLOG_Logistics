@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { WebSocketProvider } from './hooks/useWebSocket';
 import LoginPage from './pages/LoginPage';
 import TrackingPage from './pages/TrackingPage';
+import Home from './pages/Home';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import DriverLayout from './components/dashboard/DriverLayout';
 import './App.css';
@@ -26,10 +27,11 @@ function AppContent() {
     );
   }
 
-  // Simple custom routing for public pages
-  if (window.location.pathname === '/track') {
-    return <TrackingPage />;
-  }
+  const path = window.location.pathname;
+
+  if (path === '/track') return <TrackingPage />;
+  if (path === '/login') return <LoginPage />;
+  if (path === '/' && !user) return <Home />;
 
   if (!user) return <LoginPage />;
 
