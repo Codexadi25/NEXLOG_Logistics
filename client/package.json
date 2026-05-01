@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.6.2",
     "date-fns": "^3.0.6",
+    "firebase": "^12.12.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
@@ -16,16 +17,32 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prod-build": "npm run build:src && npm run build:obfuscate",
+    "build:src": "react-scripts build",
     "build": "react-scripts build",
+    "build:obfuscate": "javascript-obfuscator ./build --output ./build --compact true --self-defending true",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "proxy": "http://localhost:5000",
   "eslintConfig": {
-    "extends": ["react-app"]
+    "extends": [
+      "react-app"
+    ]
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.4.2"
   }
 }
