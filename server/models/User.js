@@ -3,11 +3,11 @@ const bcrypt = require('bcryptjs');
 
 const kycSchema = new mongoose.Schema({
   aadhaarNumber:    { type: String, trim: true },
-  aadhaarImageUrl:  { type: String }, // base64 JPEG stored
+  aadhaarImageUrl:  { type: String },
   aadhaarVerified:  { type: Boolean, default: false },
   vehicleNumber:    { type: String, trim: true },
-  vehicleImageUrl:  { type: String }, // RC doc image
-  vehiclePhotoUrl:  { type: String }, // vehicle photo with plate
+  vehicleImageUrl:  { type: String },
+  vehiclePhotoUrl:  { type: String },
   vehicleVerified:  { type: Boolean, default: false },
   dlNumber:         { type: String, trim: true },
   dlImageUrl:       { type: String },
@@ -28,7 +28,23 @@ const locationSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
   email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 6 },
+
+  /**
+   * Password is optional — Google OAuth users may not have one initially.
+   * They can set a password later via /auth/set-password.
+   * Password is stored as bcrypt hash in MongoDB.
+   * For Google users, it is ALSO synced to their Firebase Auth account
+   * via the /auth/set-password endpoint so both sources are consistent.
+   */
+  password: { type: String, minlength: 6, select: false },
+
+  // Authentication method
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
+  },
+  googleUid: { type: String, unique: true, sparse: true }, // Firebase UID for Google users
 
   role: {
     type: String,
@@ -40,20 +56,17 @@ const userSchema = new mongoose.Schema({
   phone:      { type: String, trim: true },
   avatar:     { type: String },
   isActive:   { type: Boolean, default: true },
-  isOnboarded:{ type: Boolean, default: false }, // true once KYC verified for riders
+  isOnboarded:{ type: Boolean, default: false },
   lastLogin:  { type: Date },
 
-  // Location / Hub info (for stores, hubs, FCs, etc.)
   location: locationSchema,
 
-  // Rider / Driver specific
   assignedArea:       { type: String, trim: true },
   vehicleType:        { type: String, trim: true },
   vehicleCapacity:    { type: Number, default: 0 },
   vehicleLicensePlate:{ type: String, trim: true },
   kyc:                kycSchema,
 
-  // Business / Vendor specific
   gstNumber:    { type: String, trim: true },
   panNumber:    { type: String, trim: true },
   bankAccount:  { type: String, trim: true },
@@ -63,12 +76,13 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 

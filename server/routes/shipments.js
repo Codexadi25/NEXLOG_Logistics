@@ -141,4 +141,105 @@ router.get('/track/:trackingNumber', async (req, res) => {
   }
 });
 
+// ── Lifecycle Designer: Create a multi-stop lifecycle shipment ────────────────
+// POST /api/shipments/lifecycle
+router.post('/lifecycle', auth, requireRole('admin', 'manager'), async (req, res) => {
+  try {
+    const { stops, trackingNumber, orders } = req.body;
+    if (!stops || stops.length < 2) {
+      return res.status(400).json({ message: 'At least 2 stops (origin and destination) are required' });
+    }
+
+    // Enforce: only the last stop may be marked "delivered"
+    const validatedStops = stops.map((stop, idx) => {
+      const isLast = idx === stops.length - 1;
+      if (!isLast && stop.status === 'delivered') {
+        stop.status = 'arrived'; // downgrade to arrived for intermediate stops
+      }
+      return stop;
+    });
+
+    // Derive origin and destination from stops
+    const origin = {
+      address: validatedStops[0].address,
+      city: validatedStops[0].city,
+    };
+    const destination = {
+      address: validatedStops[validatedStops.length - 1].address,
+      city: validatedStops[validatedStops.length - 1].city,
+    };
+
+    const shipment = await Shipment.create({
+      orders: orders || [],
+      origin,
+      destination,
+      lifecycleStops: validatedStops,
+      status: 'scheduled',
+    });
+
+    res.status(201).json({ shipment });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── Lifecycle Designer: Update stops for existing shipment ───────────────────
+// PATCH /api/shipments/:id/lifecycle
+router.patch('/:id/lifecycle', auth, requireRole('admin', 'manager', 'agent'), async (req, res) => {
+  try {
+    const { stops } = req.body;
+    if (!stops) return res.status(400).json({ message: 'stops array required' });
+
+    const shipment = await Shipment.findById(req.params.id);
+    if (!shipment) return res.status(404).json({ message: 'Shipment not found' });
+
+    // Enforce: only the last stop may be marked "delivered"
+    const validatedStops = stops.map((stop, idx) => {
+      const isLast = idx === stops.length - 1;
+      if (!isLast && stop.status === 'delivered') {
+        stop.status = 'arrived';
+      }
+      return stop;
+    });
+
+    shipment.lifecycleStops = validatedStops;
+
+    // Derive overall shipment status from last stop
+    const lastStop = validatedStops[validatedStops.length - 1];
+    if (lastStop.status === 'delivered') {
+      shipment.status = 'delivered';
+      shipment.actualDelivery = lastStop.actualArrival ? new Date(lastStop.actualArrival) : new Date();
+      await Order.updateMany({ shipment: shipment._id }, { status: 'delivered', actualDelivery: shipment.actualDelivery });
+    } else {
+      // Find the most advanced active stop to derive shipment status
+      const hasInTransit = validatedStops.some(s => s.status === 'in_transit');
+      const hasOutForDelivery = validatedStops.some(s => s.status === 'out_for_delivery');
+      if (hasOutForDelivery) shipment.status = 'out_for_delivery';
+      else if (hasInTransit) shipment.status = 'in_transit';
+    }
+
+    // Add a tracking event for the update
+    shipment.trackingEvents.push({
+      status: shipment.status,
+      description: 'Lifecycle stops updated',
+      updatedBy: req.user._id,
+      timestamp: new Date(),
+    });
+
+    await shipment.save();
+
+    // Broadcast update
+    const { broadcastTrackingUpdate } = require('../websocket/wsServer');
+    broadcastTrackingUpdate(shipment._id.toString(), {
+      status: shipment.status,
+      lifecycleStops: shipment.lifecycleStops,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ shipment });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

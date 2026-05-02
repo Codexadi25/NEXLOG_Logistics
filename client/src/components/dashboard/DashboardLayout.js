@@ -9,6 +9,7 @@ import DispatchPage from './DispatchPage';
 import AccountsPage from './AccountsPage';
 import ProfileModal from '../common/ProfileModal';
 import LifelinePage from '../../pages/LifelinePage';
+import ShipmentLifecyclePage from '../../pages/ShipmentLifecyclePage';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
@@ -16,8 +17,9 @@ const NAV_ITEMS = [
   { id: 'shipments', label: 'Shipments', icon: '◎' },
   { id: 'dispatch', label: 'Dispatch & Fleet', icon: '⛟', role: ['admin', 'manager'] },
   { id: 'tracking', label: 'Live Tracking', icon: '◉' },
+  { id: 'lifecycle', label: 'Lifecycle Designer', icon: '🗺️', role: ['admin', 'manager'] },
   { id: 'lifeline', label: 'Support Lifeline', icon: '⊕', role: ['admin', 'manager', 'agent'] },
-  { id: 'accounts', label: 'Team & Accounts', icon: '⊞', role: ['admin', 'manager'] },
+  { id: 'accounts', label: 'Team & Accounts', icon: '⊞', role: ['admin', 'manager', 'agent'] },
 ];
 
 export default function DashboardLayout() {
@@ -34,6 +36,7 @@ export default function DashboardLayout() {
       case 'shipments': return <ShipmentsPage />;
       case 'dispatch': return <DispatchPage />;
       case 'tracking': return <TrackingPage />;
+      case 'lifecycle': return <ShipmentLifecyclePage />;
       case 'lifeline': return <LifelinePage />;
       case 'accounts': return <AccountsPage />;
       default: return <DashboardHome />;

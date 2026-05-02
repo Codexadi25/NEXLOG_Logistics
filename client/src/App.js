@@ -1,56 +1,17 @@
 import React from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { WebSocketProvider } from './hooks/useWebSocket';
-import LoginPage from './pages/LoginPage';
-import TrackingPage from './pages/TrackingPage';
-import Home from './pages/Home';
-import DashboardLayout from './components/dashboard/DashboardLayout';
-import DriverLayout from './components/dashboard/DriverLayout';
+import { AuthProvider } from './context/AuthContext';
+import AppRoutes from './routes/AppRoutes';
 import './App.css';
 
-function AppContent() {
-  const { user, token, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-logo">
-          <svg viewBox="0 0 60 60" width="60" height="60">
-            <polygon points="30,5 55,20 55,40 30,55 5,40 5,20" fill="none" stroke="#00d4ff" strokeWidth="2"/>
-            <polygon points="30,15 45,23 45,37 30,45 15,37 15,23" fill="none" stroke="#00d4ff" strokeWidth="1.5" opacity="0.6"/>
-            <circle cx="30" cy="30" r="5" fill="#00d4ff"/>
-          </svg>
-          <span>NEXLOG</span>
-        </div>
-        <div className="loading-bar"><div className="loading-bar-inner"/></div>
-      </div>
-    );
-  }
-
-  const path = window.location.pathname;
-
-  // Public-only routes — always accessible
-  if (path === '/track') return <TrackingPage />;
-
-  // If the user IS authenticated, always go to the dashboard
-  // (handles redirect after login without needing a router)
-  if (user) {
-    return (
-      <WebSocketProvider token={token}>
-        {user.role === 'driver' ? <DriverLayout /> : <DashboardLayout />}
-      </WebSocketProvider>
-    );
-  }
-
-  // Not authenticated — show Home or Login
-  if (path === '/' ) return <Home />;
-  return <LoginPage />;
-}
-
+/**
+ * Root application component.
+ * AuthProvider wraps everything so that all routes can access auth state.
+ * AppRoutes contains the BrowserRouter + all route definitions.
+ */
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <AppRoutes />
     </AuthProvider>
   );
 }

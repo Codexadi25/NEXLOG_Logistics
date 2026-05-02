@@ -69,6 +69,31 @@ const shipmentSchema = new mongoose.Schema({
   }],
   notes: String,
   priority: { type: String, enum: ['low', 'normal', 'high', 'urgent'], default: 'normal' },
+
+  // ── Multi-stop lifecycle (from Lifecycle Designer) ───────────────────────
+  lifecycleStops: [{
+    id: String,
+    type: {
+      type: String,
+      enum: ['pickup', 'hub', 'outlet', 'fulfillment_center', 'direct_delivery', 'destination'],
+      default: 'hub',
+    },
+    name:    String,
+    city:    String,
+    address: String,
+    status: {
+      type: String,
+      enum: ['pending', 'scheduled', 'in_transit', 'arrived', 'out_for_delivery', 'delivered', 'failed'],
+      default: 'pending',
+      // NOTE: 'delivered' is only valid for the LAST stop (destination).
+      // Intermediate stops use 'arrived' to indicate the shipment has reached that point.
+    },
+    estimatedArrival: String,
+    actualArrival:    Date,
+    notes:            String,
+    updatedAt:        Date,
+    updatedBy:        { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  }],
 }, { timestamps: true });
 
 shipmentSchema.pre('save', async function (next) {

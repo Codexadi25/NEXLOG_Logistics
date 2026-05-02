@@ -1,7 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 export default function Home() {
+  const navigate = useNavigate();
+
+  const goToLogin = () => navigate('/login');
+
   return (
     <div className="saas-container">
       {/* Background Orbs & Effects */}
@@ -20,22 +25,22 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <a href="/track" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>Track Shipment</a>
-          <a href="/login" className="saas-btn saas-btn-outline" style={{ padding: '8px 20px', fontSize: 14, textDecoration: 'none' }}>Sign In</a>
+          <button onClick={goToLogin} className="saas-btn saas-btn-outline" style={{ padding: '8px 20px', fontSize: 14 }}>Sign In</button>
         </div>
       </nav>
 
       {/* Hero Section */}
       <header className="saas-hero" style={{ marginTop: 60 }}>
-        <div className="saas-badge">A Product by Aditya Tech & Devoops</div>
+        <div className="saas-badge">A Product by Aditya Tech &amp; Devoops</div>
         <h1 className="saas-title">
-          The Future of <span className="saas-text-gradient">B2B Logistics</span> & Q-Commerce
+          The Future of <span className="saas-text-gradient">B2B Logistics</span> &amp; Q-Commerce
         </h1>
         <p className="saas-subtitle">
           NEXLOG is the ultimate end-to-end fleet management and dispatch SaaS. Gain unparalleled visibility, automate your dispatch, and empower your support teams with our state-of-the-art logistics engine.
         </p>
         <div className="saas-cta-group">
-          <a href="/login" className="saas-btn saas-btn-primary" style={{ textDecoration: 'none' }}>Start Free Trial</a>
-          <a href="/login" className="saas-btn saas-btn-outline" style={{ textDecoration: 'none' }}>Book a Demo</a>
+          <button onClick={goToLogin} className="saas-btn saas-btn-primary">Start Free Trial</button>
+          <button onClick={goToLogin} className="saas-btn saas-btn-outline">Book a Demo</button>
         </div>
       </header>
 
@@ -62,6 +67,21 @@ export default function Home() {
             <h3>Intelligent Dispatch Engine</h3>
             <p>Automate driver assignments based on geographic proximity, vehicle type, and current load capacity.</p>
           </div>
+          <div className="saas-feature-card">
+            <div className="saas-feature-icon">🗺️</div>
+            <h3>Shipment Lifecycle Designer</h3>
+            <p>Design complex multi-hub shipment routes. Track each leg precisely — from outlet to hub, never falsely marked delivered.</p>
+          </div>
+          <div className="saas-feature-card">
+            <div className="saas-feature-icon">🔒</div>
+            <h3>Role-Based Access Control</h3>
+            <p>Granular permissions for admins, agents, drivers, vendors and more — with Google OAuth sign-in support.</p>
+          </div>
+          <div className="saas-feature-card">
+            <div className="saas-feature-icon">📦</div>
+            <h3>End-to-End Order Management</h3>
+            <p>From placement to proof-of-delivery, manage every touchpoint of the order journey from one unified dashboard.</p>
+          </div>
         </div>
       </section>
 
@@ -84,7 +104,7 @@ export default function Home() {
               <li>✓ Basic Dashboard Access</li>
               <li>✓ Standard Email Support</li>
             </ul>
-            <button className="saas-btn saas-btn-outline saas-btn-full">Get Started</button>
+            <button onClick={goToLogin} className="saas-btn saas-btn-outline saas-btn-full">Get Started</button>
           </div>
 
           {/* Professional Tier */}
@@ -100,7 +120,7 @@ export default function Home() {
               <li>✓ Live WebSocket Tracking</li>
               <li>✓ Priority Chat Support</li>
             </ul>
-            <button className="saas-btn saas-btn-primary saas-btn-full">Start Free Trial</button>
+            <button onClick={goToLogin} className="saas-btn saas-btn-primary saas-btn-full">Start Free Trial</button>
           </div>
 
           {/* Enterprise Tier */}
@@ -115,7 +135,12 @@ export default function Home() {
               <li>✓ Custom AI KYC Extraction</li>
               <li>✓ Dedicated Account Manager</li>
             </ul>
-            <button className="saas-btn saas-btn-outline saas-btn-full">Contact Sales</button>
+            <button
+              onClick={() => window.open('mailto:sales@adityatechdevoops.com?subject=NEXLOG Enterprise Enquiry', '_blank')}
+              className="saas-btn saas-btn-outline saas-btn-full"
+            >
+              Contact Sales
+            </button>
           </div>
         </div>
       </section>
@@ -124,8 +149,11 @@ export default function Home() {
       <footer className="saas-footer">
         <div className="saas-footer-content">
           <h3>Ready to revolutionize your logistics?</h3>
-          <p>Join the next generation of supply chain technology crafted by Aditya Tech & Devoops.</p>
-          <div className="saas-footer-brand">© 2026 Aditya Tech & Devoops. All rights reserved.</div>
+          <p>Join the next generation of supply chain technology crafted by Aditya Tech &amp; Devoops.</p>
+          <button onClick={goToLogin} className="saas-btn saas-btn-primary" style={{ marginBottom: 32 }}>
+            Get Started — It's Free
+          </button>
+          <div className="saas-footer-brand">© 2026 Aditya Tech &amp; Devoops. All rights reserved.</div>
         </div>
       </footer>
     </div>

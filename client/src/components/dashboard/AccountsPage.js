@@ -194,7 +194,12 @@ export default function AccountsPage() {
 function UserFormModal({ title, user: initUser, onClose, onSave }) {
   const { user: me } = useAuth();
   const isEdit = !!initUser;
-  const isAdmin = ['admin', 'manager'].includes(me?.role);
+  // Only actual admins can assign the admin role or toggle active status
+  const isActualAdmin = me?.role === 'admin';
+  // Managers and admins can change non-admin roles
+  const canChangeRole = ['admin', 'manager'].includes(me?.role);
+  // isAdmin here means can manage (admin or manager)
+  const isAdmin = canChangeRole;
 
   const [form, setForm] = useState({
     name: initUser?.name || '',
@@ -307,15 +312,22 @@ function UserFormModal({ title, user: initUser, onClose, onSave }) {
                     <input className="form-input" value={form.phone} onChange={set('phone')} placeholder="+91 9876543210" />
                   </div>
                 </div>
-                {isAdmin && (
+                {canChangeRole && (
                   <div className="grid-2">
                     <div className="form-group">
                       <label className="form-label">Role</label>
                       <select className="form-select" value={form.role} onChange={set('role')}>
-                        {Object.entries(ROLE_CONFIG).map(([k, v]) => (
-                          <option key={k} value={k}>{v.icon} {v.label}</option>
-                        ))}
+                        {Object.entries(ROLE_CONFIG).map(([k, v]) => {
+                          // Only admins can see / assign the 'admin' role option
+                          if (k === 'admin' && !isActualAdmin) return null;
+                          return <option key={k} value={k}>{v.icon} {v.label}</option>;
+                        })}
                       </select>
+                      {!isActualAdmin && form.role === 'admin' && (
+                        <span style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4, display: 'block' }}>
+                          Only admins can assign the admin role.
+                        </span>
+                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Company</label>
@@ -323,7 +335,7 @@ function UserFormModal({ title, user: initUser, onClose, onSave }) {
                     </div>
                   </div>
                 )}
-                {isAdmin && isEdit && (
+                {isActualAdmin && isEdit && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
                     <label htmlFor="isActive" style={{ cursor: 'pointer', fontSize: 14 }}>Account Active</label>
