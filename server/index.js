@@ -24,7 +24,12 @@ initWebSocket(server);
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: [
+    process.env.CLIENT_URL,
+    'http://localhost:3000',
+    'https://nexloglogistics.web.app',
+    'https://nexloglogistics.firebaseapp.com'
+  ].filter(Boolean),
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));

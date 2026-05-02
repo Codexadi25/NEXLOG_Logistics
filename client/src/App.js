@@ -29,17 +29,22 @@ function AppContent() {
 
   const path = window.location.pathname;
 
+  // Public-only routes — always accessible
   if (path === '/track') return <TrackingPage />;
-  if (path === '/login') return <LoginPage />;
-  if (path === '/' && !user) return <Home />;
 
-  if (!user) return <LoginPage />;
+  // If the user IS authenticated, always go to the dashboard
+  // (handles redirect after login without needing a router)
+  if (user) {
+    return (
+      <WebSocketProvider token={token}>
+        {user.role === 'driver' ? <DriverLayout /> : <DashboardLayout />}
+      </WebSocketProvider>
+    );
+  }
 
-  return (
-    <WebSocketProvider token={token}>
-      {user.role === 'driver' ? <DriverLayout /> : <DashboardLayout />}
-    </WebSocketProvider>
-  );
+  // Not authenticated — show Home or Login
+  if (path === '/' ) return <Home />;
+  return <LoginPage />;
 }
 
 function App() {

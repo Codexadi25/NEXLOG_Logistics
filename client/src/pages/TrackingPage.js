@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../context/AuthContext';
 import '../App.css'; // ensure styles are available
 
 export default function TrackingPage() {
@@ -23,7 +23,7 @@ export default function TrackingPage() {
     setError('');
     setResult(null);
     try {
-      const { data } = await axios.get(`/api/tracking/${id}`);
+      const { data } = await api.get(`/tracking/${id}`);
       setResult(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Tracking ID not found. Please check your number.');
